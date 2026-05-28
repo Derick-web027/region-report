@@ -5,101 +5,114 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>区域分析报告生成器</title>
 <style>
-  * { box-sizing: border-box; }
-  body { font-family: -apple-system,"Microsoft YaHei","微软雅黑",sans-serif;
-         margin:0; background:#f4f5f7; color:#222; }
-  .wrap { max-width: 760px; margin: 0 auto; padding: 40px 20px 60px; }
-  h1 { font-size: 24px; margin: 6px 0 6px; }
-  .sub { color:#888; font-size:14px; margin-bottom:26px; line-height:1.6; }
-  .card { background:#fff; border:1px solid #e6e8eb; border-radius:14px;
-          padding:26px 26px; margin-bottom:18px; box-shadow:0 1px 3px rgba(0,0,0,.04); }
-  .row { display:flex; gap:16px; align-items:center; flex-wrap:wrap; margin-bottom:16px; }
-  .row:last-child { margin-bottom:0; }
-  .lab { width:64px; font-size:15px; color:#555; }
-  select { font-family:inherit; font-size:16px; padding:11px 14px; border:1px solid #d4d7db;
-           border-radius:9px; background:#fff; flex:1; min-width:220px; }
-  button { font-family:inherit; cursor:pointer; border:none; border-radius:10px;
-           background:#c1622d; color:#fff; font-size:17px; padding:14px 30px; font-weight:600; }
-  button:hover { background:#a9521f; }
-  button:disabled { background:#cdb3a4; cursor:not-allowed; }
-  .hint { font-size:13px; color:#999; margin-top:4px; }
-  #msg { margin-top:16px; font-size:14px; min-height:20px; color:#1f9254; }
-  .meta { font-size:12px; color:#aaa; margin-top:8px; }
-  .foot { font-size:12px; color:#aaa; text-align:center; margin-top:26px; line-height:1.7; }
-  details { margin-top:14px; font-size:13px; color:#666; }
-  summary { cursor:pointer; color:#c1622d; }
-  details p { line-height:1.7; }
+  :root{ --brand:#c1622d; --brand-d:#a9521f; --ink:#222; --mut:#8a8f96; --line:#e8eaed; --bg:#f4f5f7; }
+  *{ box-sizing:border-box; }
+  body{ font-family:-apple-system,"Microsoft YaHei","微软雅黑",sans-serif; margin:0; background:var(--bg); color:var(--ink); }
+  .wrap{ max-width:1000px; margin:0 auto; padding:36px 20px 70px; }
+  .head h1{ font-size:26px; margin:0 0 8px; }
+  .head p{ color:var(--mut); font-size:14px; margin:0; line-height:1.7; }
+  .bar{ position:sticky; top:0; z-index:5; background:var(--bg); padding:18px 0 14px; margin-top:18px; }
+  .search{ position:relative; max-width:420px; }
+  .search input{ width:100%; font-family:inherit; font-size:15px; padding:12px 14px 12px 38px;
+    border:1px solid #d4d7db; border-radius:10px; background:#fff; outline:none; }
+  .search input:focus{ border-color:var(--brand); }
+  .search svg{ position:absolute; left:12px; top:50%; transform:translateY(-50%); opacity:.45; }
+  .count{ color:var(--mut); font-size:13px; margin-top:8px; }
+  .prov{ margin-top:22px; }
+  .prov h2{ font-size:15px; color:var(--brand); margin:0 0 12px; font-weight:700;
+    border-left:3px solid var(--brand); padding-left:9px; }
+  .grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:10px; }
+  .city{ display:flex; align-items:center; justify-content:space-between; gap:6px;
+    background:#fff; border:1px solid var(--line); border-radius:10px; padding:12px 14px;
+    cursor:pointer; transition:.15s; font-size:15px; }
+  .city:hover{ border-color:var(--brand); box-shadow:0 2px 8px rgba(193,98,45,.12); transform:translateY(-1px); }
+  .city .dl{ color:var(--brand); opacity:0; transition:.15s; font-size:13px; white-space:nowrap; }
+  .city:hover .dl{ opacity:1; }
+  .empty{ color:var(--mut); font-size:14px; padding:30px 0; text-align:center; }
+  #toast{ position:fixed; left:50%; bottom:34px; transform:translateX(-50%) translateY(20px);
+    background:#1f9254; color:#fff; padding:11px 20px; border-radius:10px; font-size:14px;
+    opacity:0; pointer-events:none; transition:.25s; box-shadow:0 4px 16px rgba(0,0,0,.18); }
+  #toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+  details{ margin-top:26px; font-size:13px; color:#666; }
+  summary{ cursor:pointer; color:var(--brand); }
+  details p{ line-height:1.8; }
+  .foot{ font-size:12px; color:var(--mut); text-align:center; margin-top:30px; line-height:1.8; }
 </style>
 </head>
 <body>
 <div class="wrap">
-  <h1>区域分析报告生成器</h1>
-  <div class="sub">选择省份与城市，一键下载该地区的「城投区域分析报告」（Word 文档）。<br>
-    报告涵盖区域经济、财政与政府债务、土地与房地产市场，骨架与样式统一。</div>
-
-  <div class="card">
-    <div class="row"><div class="lab">省份</div><select id="prov"></select></div>
-    <div class="row"><div class="lab">城市</div><select id="city"></select></div>
-    <div class="hint" id="cityhint"></div>
-    <div class="row" style="margin-top:8px;"><button id="dl" disabled>下载区域报告</button></div>
-    <div id="msg"></div>
+  <div class="head">
+    <h1>区域分析报告生成器</h1>
+    <p>点击城市即可下载该地区的「城投区域分析报告」（Word）。报告按统一框架撰写，涵盖区域经济、财政与政府债务、土地与房地产市场。</p>
   </div>
+
+  <div class="bar">
+    <div class="search">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+      <input id="q" type="text" placeholder="搜索城市，如 苏州、武汉、厦门…" autocomplete="off">
+    </div>
+    <div class="count" id="count"></div>
+  </div>
+
+  <div id="list"></div>
 
   <details>
     <summary>关于报告内容与口径</summary>
-    <p>· 全部数值、同比增速、累计跌幅、省内排名、二手房冰山指数跌幅均由数据库自动计算；<br>
-       · 「支柱产业 / 龙头企业 / 战略定位」等数据库未覆盖的定性内容，报告中以【待补充】占位，请人工补充；<br>
-       · 标注「无土地数据」的城市，其土地与房地产章节为占位（数据库暂未覆盖该市土地市场）。</p>
+    <p>· 全部数值、同比增速、累计跌幅、省内排名与 GDP 倍数、二手房冰山指数跌幅，均由区域数据库自动计算；<br>
+       · 行政定位、支柱产业与龙头企业等定性内容，依据各市经济画像撰写；<br>
+       · 仅覆盖已维护土地市场数据的地级市；其余城市暂不在本站收录范围。</p>
   </details>
 
   <div class="foot">
-    数据来源：企业预警通、中指数据库、Wind 等公开/授权数据，风控信评部整理，仅供研究参考。<br>
+    数据来源：企业预警通、中指数据库、Wind 等，风控信评部整理，仅供研究参考。<br>
     <span id="gen"></span>
   </div>
 </div>
 
+<div id="toast"></div>
 <a id="anchor" style="display:none"></a>
+
 <script src="manifest.js"></script>
 <script>
-function el(id){return document.getElementById(id);}
-const M = window.MANIFEST || {provinces:[],data:{}};
+const M = window.MANIFEST || {provinces:[], data:{}};
+const $ = id => document.getElementById(id);
+let TOTAL = 0;
 
-function fillProv(){
-  el("prov").innerHTML = M.provinces.map(p=>`<option>${p}</option>`).join("");
-  fillCity();
-}
-function fillCity(){
-  const list = M.data[el("prov").value] || [];
-  el("city").innerHTML = list.map((e,i)=>
-    `<option value="${i}">${e.city}${e.hasLand?"":"（无土地数据）"}</option>`).join("");
-  updateHint();
-}
-function current(){
-  const list = M.data[el("prov").value] || [];
-  return list[parseInt(el("city").value||"0",10)] || null;
-}
-function updateHint(){
-  const e = current();
-  el("cityhint").textContent = (e && !e.hasLand)
-    ? "提示：该市暂无土地市场数据，报告中土地与房地产部分为「待补充」占位。" : "";
-  el("dl").disabled = !e;
-  el("msg").textContent = "";
+function build(filter){
+  filter = (filter||"").trim();
+  const list = $("list"); list.innerHTML="";
+  let shown = 0;
+  for(const prov of M.provinces){
+    const cities = (M.data[prov]||[]).filter(e => !filter || e.city.includes(filter));
+    if(!cities.length) continue;
+    const sec = document.createElement("div"); sec.className="prov";
+    sec.innerHTML = `<h2>${prov}</h2>`;
+    const grid = document.createElement("div"); grid.className="grid";
+    for(const e of cities){
+      shown++;
+      const card = document.createElement("div"); card.className="city";
+      card.innerHTML = `<span>${e.city}</span><span class="dl">下载 ↓</span>`;
+      card.addEventListener("click", ()=>download(e));
+      grid.appendChild(card);
+    }
+    sec.appendChild(grid); list.appendChild(sec);
+  }
+  if(!shown){ list.innerHTML = `<div class="empty">未找到匹配“${filter}”的城市</div>`; }
+  $("count").textContent = filter ? `匹配 ${shown} 个城市` : `共收录 ${TOTAL} 个地级市`;
 }
 
-el("prov").addEventListener("change", fillCity);
-el("city").addEventListener("change", updateHint);
-el("dl").addEventListener("click", ()=>{
-  const e = current(); if(!e) return;
-  const a = el("anchor");
-  a.href = e.file;
-  a.download = e.name;
-  a.click();
-  el("msg").textContent = "✓ 已开始下载：" + e.name;
-});
+function download(e){
+  const a = $("anchor");
+  a.href = e.file; a.download = e.name; a.click();
+  const t = $("toast"); t.textContent = "✓ 已开始下载：" + e.name;
+  t.classList.add("show"); clearTimeout(window._tt);
+  window._tt = setTimeout(()=>t.classList.remove("show"), 2600);
+}
 
-fillProv();
-el("gen").textContent = "数据更新日期：" + (M.generated || "—") + " ｜ 覆盖 " +
-  Object.values(M.data).reduce((s,a)=>s+a.length,0) + " 个地级市";
+TOTAL = M.provinces.reduce((s,p)=>s+(M.data[p]||[]).length,0);
+$("q").addEventListener("input", ev => build(ev.target.value));
+$("gen").textContent = "数据更新日期：" + (M.generated||"—") + " ｜ 覆盖 " + TOTAL + " 个地级市";
+build("");
 </script>
 </body>
 </html>
