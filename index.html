@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>区域分析报告生成器</title>
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: -apple-system,"Microsoft YaHei","微软雅黑",sans-serif;
+         margin:0; background:#f4f5f7; color:#222; }
+  .wrap { max-width: 760px; margin: 0 auto; padding: 40px 20px 60px; }
+  h1 { font-size: 24px; margin: 6px 0 6px; }
+  .sub { color:#888; font-size:14px; margin-bottom:26px; line-height:1.6; }
+  .card { background:#fff; border:1px solid #e6e8eb; border-radius:14px;
+          padding:26px 26px; margin-bottom:18px; box-shadow:0 1px 3px rgba(0,0,0,.04); }
+  .row { display:flex; gap:16px; align-items:center; flex-wrap:wrap; margin-bottom:16px; }
+  .row:last-child { margin-bottom:0; }
+  .lab { width:64px; font-size:15px; color:#555; }
+  select { font-family:inherit; font-size:16px; padding:11px 14px; border:1px solid #d4d7db;
+           border-radius:9px; background:#fff; flex:1; min-width:220px; }
+  button { font-family:inherit; cursor:pointer; border:none; border-radius:10px;
+           background:#c1622d; color:#fff; font-size:17px; padding:14px 30px; font-weight:600; }
+  button:hover { background:#a9521f; }
+  button:disabled { background:#cdb3a4; cursor:not-allowed; }
+  .hint { font-size:13px; color:#999; margin-top:4px; }
+  #msg { margin-top:16px; font-size:14px; min-height:20px; color:#1f9254; }
+  .meta { font-size:12px; color:#aaa; margin-top:8px; }
+  .foot { font-size:12px; color:#aaa; text-align:center; margin-top:26px; line-height:1.7; }
+  details { margin-top:14px; font-size:13px; color:#666; }
+  summary { cursor:pointer; color:#c1622d; }
+  details p { line-height:1.7; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>区域分析报告生成器</h1>
+  <div class="sub">选择省份与城市，一键下载该地区的「城投区域分析报告」（Word 文档）。<br>
+    报告涵盖区域经济、财政与政府债务、土地与房地产市场，骨架与样式统一。</div>
+
+  <div class="card">
+    <div class="row"><div class="lab">省份</div><select id="prov"></select></div>
+    <div class="row"><div class="lab">城市</div><select id="city"></select></div>
+    <div class="hint" id="cityhint"></div>
+    <div class="row" style="margin-top:8px;"><button id="dl" disabled>下载区域报告</button></div>
+    <div id="msg"></div>
+  </div>
+
+  <details>
+    <summary>关于报告内容与口径</summary>
+    <p>· 全部数值、同比增速、累计跌幅、省内排名、二手房冰山指数跌幅均由数据库自动计算；<br>
+       · 「支柱产业 / 龙头企业 / 战略定位」等数据库未覆盖的定性内容，报告中以【待补充】占位，请人工补充；<br>
+       · 标注「无土地数据」的城市，其土地与房地产章节为占位（数据库暂未覆盖该市土地市场）。</p>
+  </details>
+
+  <div class="foot">
+    数据来源：企业预警通、中指数据库、Wind 等公开/授权数据，风控信评部整理，仅供研究参考。<br>
+    <span id="gen"></span>
+  </div>
+</div>
+
+<a id="anchor" style="display:none"></a>
+<script src="manifest.js"></script>
+<script>
+function el(id){return document.getElementById(id);}
+const M = window.MANIFEST || {provinces:[],data:{}};
+
+function fillProv(){
+  el("prov").innerHTML = M.provinces.map(p=>`<option>${p}</option>`).join("");
+  fillCity();
+}
+function fillCity(){
+  const list = M.data[el("prov").value] || [];
+  el("city").innerHTML = list.map((e,i)=>
+    `<option value="${i}">${e.city}${e.hasLand?"":"（无土地数据）"}</option>`).join("");
+  updateHint();
+}
+function current(){
+  const list = M.data[el("prov").value] || [];
+  return list[parseInt(el("city").value||"0",10)] || null;
+}
+function updateHint(){
+  const e = current();
+  el("cityhint").textContent = (e && !e.hasLand)
+    ? "提示：该市暂无土地市场数据，报告中土地与房地产部分为「待补充」占位。" : "";
+  el("dl").disabled = !e;
+  el("msg").textContent = "";
+}
+
+el("prov").addEventListener("change", fillCity);
+el("city").addEventListener("change", updateHint);
+el("dl").addEventListener("click", ()=>{
+  const e = current(); if(!e) return;
+  const a = el("anchor");
+  a.href = e.file;
+  a.download = e.name;
+  a.click();
+  el("msg").textContent = "✓ 已开始下载：" + e.name;
+});
+
+fillProv();
+el("gen").textContent = "数据更新日期：" + (M.generated || "—") + " ｜ 覆盖 " +
+  Object.values(M.data).reduce((s,a)=>s+a.length,0) + " 个地级市";
+</script>
+</body>
+</html>
